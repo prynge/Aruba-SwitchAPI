@@ -24,6 +24,7 @@ class SwitchAPI {
 	private Config $config;
 	private $token = '';
 	private $cache = [];
+	private $cookie = [];
 
 
 	/**
@@ -40,6 +41,16 @@ class SwitchAPI {
 		// Login
 		$this->login();
 	}
+
+	/**
+	 * Method to sanitize URI identifiers
+	 * @param string $uri URI identifier got from request
+	 * @return string Return endpoint to use in curlRequest
+	 */
+	private function uriToEndpoint(string $uri){
+		return preg_replace('/^' . preg_quote('/rest/v10.09', '/') . '/', '', $uri);
+	}
+
 
 
 	/**
@@ -72,10 +83,35 @@ class SwitchAPI {
 		if (!empty($this->token)) {
 			$headers[] = 'Cookie: '.$this->token;
 		}
+		// If cookie exist, add it in the headers
+		if (!empty($this->cookie)) {
+			$headers[] = 'Cookie:user='.$this->cookie['user'].'; id='.$this->cookie['id'];
+		}
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-		// Execute CURL
-		$result = curl_exec($ch);
+		$resheaders=array();
+		$rescookies=array();
+		$resdebuginfo="";
+		
+		switch ($this->config->getOsVersion()) {
+			case 'AOS-CX':
+				curl_setopt($ch, CURLOPT_HEADER, true);
+				
+				// Execute CURL
+				$result = $this->hhb_curl_exec2($ch,$resheaders,$rescookies,$resdebuginfo);
+				
+			
+			case 'AOS-Switch':
+				// Execute CURL
+				$result = curl_exec($ch);
+				break;
+			
+			default:
+				// Execute CURL
+				$result = curl_exec($ch);
+				break;
+		}
+
 		if (curl_errno($ch)) {
 		    throw new Exception('curlRequest() : Curl error : '.curl_error($ch));
 		}
@@ -92,9 +128,16 @@ class SwitchAPI {
 					// Return decoded JSON response
 					return $resultJSON;
 				}
-			} else {
-				throw new Exception('curlRequest() called by '.debug_backtrace()[1]['function'].'() : Curl response is not JSON as expected.');
+			} else if(count($rescookies)!=0){
+				return $rescookies;
+			} else if($result== "401 Authorization Required"){
+				throw new Exception('curlRequest() called by '.debug_backtrace()[1]['function'].'() : API returned error : '.$result);
+			
+			} else if(debug_backtrace()[1]['function'] !='logout') {
+				throw new Exception('curlRequest() called by '.debug_backtrace()[1]['function'].'() : Curl response is not JSON as expected.'.($result));
 			}
+		} else if(count($rescookies)!=0){
+				return $rescookies;
 		} else {
 			return TRUE;
 		}

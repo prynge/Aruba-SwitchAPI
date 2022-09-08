@@ -23,6 +23,7 @@ class Config {
 	private bool $SSLVerifyPeer = TRUE;
 	private int $SSLVerifyHost = 2;
 	private string $apiVersion = 'v7';
+	private string $osVersion = 'AOS-Switch';
 
 
 	/**
@@ -159,6 +160,26 @@ class Config {
 	*/
 	public function getAPIVersion() {
 		return $this->apiVersion;
+	}
+
+
+	/**
+	*	Setter for ArubaOS version to use.
+	*	@param string $version ArubaOS version to use e.g. 'AOS-CX'.
+	*	@return Config Config object to be passed on a new instance of SwitchAPI object.
+	*/
+	public function setOsVersion(string $version) {
+		$this->osVersion = $version;
+		return $this;
+	}
+
+
+	/**
+	*	Getter for ArubaOS version to use.
+	*	@return string ArubaOS version to use.
+	*/
+	public function getOsVersion() {
+		return $this->osVersion;
 	}
 
 }
